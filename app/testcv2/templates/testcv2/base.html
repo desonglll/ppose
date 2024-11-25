@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %}</title>
+    <link href="{% static "css/video_page.css" %}" rel="stylesheet">
+    {% block scripts %}
+    {% endblock %}
+</head>
+<body>
+<div id="header">
+    {% block header %}
+    {% endblock %}
+</div>
+<div id="video-container">
+    {% block video-container %}
+    {% endblock %}
+</div>
+<div id="info-display-container">
+    {% block info-display-container %}
+    {% endblock %}
+</div>
+</body>
+</html>
