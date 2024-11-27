@@ -1,58 +1,50 @@
 {% extends "testcv2/base.html" %}
-{% load static %}
-
-{% block video-container %}
+{% block body %}
     <h1>Video Stream</h1>
-    <div class="video_window">
-        <!-- 表单提交时传递param参数 -->
-        <form action="{% url 'video_page' %}" method="get">
-            <button type="submit" name="param" value="1">显示骨架图</button>
-            <button type="submit" name="param" value="2">显示关键点</button>
-            <button type="submit" name="param" value="3">显示胳膊夹角</button>
-            <button type="submit" name="param" value="4">显示抬头角度（使用单眼）</button>
-            <button type="submit" name="param" value="5">显示抬头角度（使用双眼）</button>
-            <button type="submit" name="param" value="6">显示抬头角度（使用所有头部信息）</button>
-        </form>
-
-
-        <img id="video_stream" alt="Video Stream" width="800">
-        <div id="angle_display"></div>
-
+    <div class="container">
+        <div class="d-flex justify-content-around">
+            <form action="{% url 'video_page' %}" method="get">
+                <button class="btn btn-primary" type="submit" name="param" value="1">显示骨架图</button>
+                <button class="btn btn-primary" type="submit" name="param" value="2">显示关键点</button>
+                <button class="btn btn-primary" type="submit" name="param" value="3">显示胳膊夹角</button>
+                <button class="btn btn-primary" type="submit" name="param" value="4">显示抬头角度（使用单眼）</button>
+                <button class="btn btn-primary" type="submit" name="param" value="5">显示抬头角度（使用双眼）</button>
+                <button class="btn btn-primary" type="submit" name="param" value="6">显示抬头角度（使用所有头部信息）
+                </button>
+            </form>
+        </div>
+        <div>
+            <img id="video_stream" alt="Video Stream" width="100%" src="">
+            <div id="angle_display"></div>
+        </div>
     </div>
-    <div>this is a test</div>
 {% endblock %}
 
 {% block scripts %}
-   <script>
-    function startStream() {
-        const imgElement = document.getElementById('video_stream');
-        const angleElement = document.getElementById('angle_display');
+    <script>
+        function startStream() {
+            const imgElement = document.getElementById('video_stream');
+            const angleElement = document.getElementById('angle_display');
+            const param = new URLSearchParams(window.location.search).get('param') || '1';
 
-        const url = imgElement.src;
-        const eventSource = new EventSource(url);
+            const eventSource = new EventSource(`/test/video-feed?param=${param}`);
 
-        fetch(url).then(response => {
-            const reader = response.body.getReader();
-            function read() {
-                reader.read().then(({ done, value }) => {
-                    if (done) return;
-                    const text = new TextDecoder('utf-8').decode(value);
-                    try {
-                        const frame = JSON.parse(text.replace(/--frame\r\nContent-Type: application\/json\r\n\r\n/g, ''));
-                        imgElement.src = 'data:image/jpeg;base64,' + btoa(frame.image);
-                        angleElement.textContent = `角度: ${frame.angle}`;
-                    } catch (e) {
-                        console.error(e);
-                    }
-                    read();
-                });
-            }
-            read();
-        });
-    }
-</script>
+            eventSource.onmessage = function (event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    imgElement.src = 'data:image/jpeg;base64,' + data.image;
+                    angleElement.textContent = `角度: ${data.angle}`;
+                } catch (e) {
+                    console.error(e);
+                }
+            };
 
-<img id="video_stream" alt="Video Stream" width="800">
-<div id="angle_display"></div>
+            eventSource.onerror = function () {
+                console.error('Error receiving video stream');
+                eventSource.close();  // 关闭流
+            };
+        }
 
+        document.addEventListener('DOMContentLoaded', startStream);
+    </script>
 {% endblock %}

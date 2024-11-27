@@ -1,13 +1,11 @@
 import json
-
+import base64  # 用于 Base64 编码图像数据
 from django.shortcuts import render
-
-import cv2
 from django.http import StreamingHttpResponse
-
+import cv2
 from .algos.pose import PoseDetector
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 detector = PoseDetector()
 
 
@@ -34,21 +32,23 @@ def get_frame(param):
 
         _, buffer = cv2.imencode('.jpg', img)
 
+        # 将图像数据编码为 Base64
+        image_base64 = base64.b64encode(buffer).decode('utf-8')
+
         # 将图像数据和角度信息组合成 JSON
         data = {
-            "angle": angle,
-            "image": buffer.tobytes().decode("latin1")  # 将二进制数据转换为可传输字符串
+            "angle": angle - 10,
+            "image": image_base64  # Base64 编码后的图像
         }
-        yield (
-            b'--frame\r\n'
-            b'Content-Type: application/json\r\n\r\n' +
-            json.dumps(data).encode('utf-8') +
-            b'\r\n'
-        )
+        yield f"data: {json.dumps(data)}\n\n"
+
 
 def video_feed(request):
     param = request.GET.get('param', '1')
-    return StreamingHttpResponse(get_frame(param), content_type='multipart/x-mixed-replace; boundary=frame')
+    return StreamingHttpResponse(
+        get_frame(param),
+        content_type='text/event-stream',  # 使用 SSE
+    )
 
 
 def video_page(request):
