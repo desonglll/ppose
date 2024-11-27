@@ -17,6 +17,8 @@ def get_frame(param):
         if not ret:
             break
 
+        angle = 0  # 初始化角度
+
         if param == "1":
             img = detector.find_pose(img)
         elif param == "2":
@@ -31,14 +33,18 @@ def get_frame(param):
             img, angle = detector.find_angle_with_horizontal_mean_all(img, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, draw=True)
 
         _, buffer = cv2.imencode('.jpg', img)
-        frame_data = (
-                b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' +
-                buffer.tobytes() +
-                b'\r\n'
+
+        # 将图像数据和角度信息组合成 JSON
+        data = {
+            "angle": angle,
+            "image": buffer.tobytes().decode("latin1")  # 将二进制数据转换为可传输字符串
+        }
+        yield (
+            b'--frame\r\n'
+            b'Content-Type: application/json\r\n\r\n' +
+            json.dumps(data).encode('utf-8') +
+            b'\r\n'
         )
-
-        yield frame_data
-
 
 def video_feed(request):
     param = request.GET.get('param', '1')

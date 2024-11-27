@@ -14,9 +14,45 @@
             <button type="submit" name="param" value="6">显示抬头角度（使用所有头部信息）</button>
         </form>
 
-        <!-- 图像标签根据param参数动态更新 -->
-        <img id="video_stream" src="{% url 'video_feed' %}?param={{ request.GET.param|default:"1" }}" alt="Video Stream"
-             width="800">
+
+        <img id="video_stream" alt="Video Stream" width="800">
+        <div id="angle_display"></div>
+
     </div>
+    <div>this is a test</div>
 {% endblock %}
 
+{% block scripts %}
+   <script>
+    function startStream() {
+        const imgElement = document.getElementById('video_stream');
+        const angleElement = document.getElementById('angle_display');
+
+        const url = imgElement.src;
+        const eventSource = new EventSource(url);
+
+        fetch(url).then(response => {
+            const reader = response.body.getReader();
+            function read() {
+                reader.read().then(({ done, value }) => {
+                    if (done) return;
+                    const text = new TextDecoder('utf-8').decode(value);
+                    try {
+                        const frame = JSON.parse(text.replace(/--frame\r\nContent-Type: application\/json\r\n\r\n/g, ''));
+                        imgElement.src = 'data:image/jpeg;base64,' + btoa(frame.image);
+                        angleElement.textContent = `角度: ${frame.angle}`;
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    read();
+                });
+            }
+            read();
+        });
+    }
+</script>
+
+<img id="video_stream" alt="Video Stream" width="800">
+<div id="angle_display"></div>
+
+{% endblock %}
