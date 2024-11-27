@@ -35,6 +35,9 @@ def get_frame(param):
         # 将图像数据编码为 Base64
         image_base64 = base64.b64encode(buffer).decode('utf-8')
 
+        if not angle:
+            angle = 0
+
         # 将图像数据和角度信息组合成 JSON
         data = {
             "angle": angle - 10,
