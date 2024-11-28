@@ -21,14 +21,33 @@ def get_frame(param):
             img = detector.find_pose(img)
         elif param == "2":
             img, landmarks = detector.find_position(img, convert_to_x_y_pixel=True, draw=True)
+            if landmarks[7].x > landmarks[0].x:
+                print("Camera on LEFT")
+            else:
+                print("Camera on RIGHT")
+
         elif param == "3":
             img, angle = detector.find_angle(img, 16, 14, 12)
         elif param == "4":
             img, angle = detector.find_angle_with_horizontal(img, 5, 10, draw=True)
         elif param == "5":
-            img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, draw=True)
+            img, landmarks = detector.find_position(img, convert_to_x_y_pixel=True, draw=False)
+            if landmarks[7].x > landmarks[0].x:  # 判断摄像头所处的左右
+                img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, side="left", draw=True)
+                print("Camera on LEFT")
+            else:
+                img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, side="right", draw=True)
+                print("Camera on RIGHT")
         elif param == "6":
-            img, angle = detector.find_angle_with_horizontal_mean_all(img, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, draw=True)
+            img, landmarks = detector.find_position(img, convert_to_x_y_pixel=True, draw=False)
+            if landmarks[7].x > landmarks[0].x:  # 判断摄像头所处的左右
+                img, angle = detector.find_angle_with_horizontal_mean_all(img, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, draw=True,
+                                                                          side="left")
+                print("Camera on LEFT")
+            else:
+                img, angle = detector.find_angle_with_horizontal_mean_all(img, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, draw=True,
+                                                                          side="right")
+                print("Camera on RIGHT")
 
         _, buffer = cv2.imencode('.jpg', img)
 

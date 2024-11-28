@@ -50,9 +50,7 @@ def calculate_angle_with_horizontal(x1, y1, x2, y2):
     if angle_degrees > 180:
         angle_degrees -= 360
 
-    print(f"法向量与水平线的夹角（弧度）：{angle_radians}")
-    print(f"法向量与水平线的夹角（度）：{angle_degrees}")
-    return angle_degrees
+    return angle_degrees, angle_radians
 
 
 class PoseDetector:
@@ -107,7 +105,11 @@ class PoseDetector:
                 self.lm_dict[keypoint_id] = LandMark(keypoint_id, landmark.x, landmark.y, landmark.z,
                                                      landmark.visibility)
                 if draw and convert_to_x_y_pixel:
-                    cv2.circle(img, (landmark.x, landmark.y), 10, (255, 0, 0), cv2.FILLED)
+                    # 绘制点
+                    cv2.circle(img, (landmark.x, landmark.y), 5, (255, 0, 0), cv2.FILLED)
+                    # 绘制序号
+                    cv2.putText(img, str(keypoint_id), (landmark.x, landmark.y - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         return img, self.lm_dict
 
     def find_angle(self, img, p1, p2, p3, draw=True):
@@ -157,7 +159,7 @@ class PoseDetector:
             ny = dx  # 法向量 y 分量
 
             # 计算法向量与水平线的夹角
-            angle_degrees = calculate_angle_with_horizontal(x1, y1, x2, y2)
+            angle_degrees, _ = calculate_angle_with_horizontal(x1, y1, x2, y2)
 
             if draw:
                 # 绘制原直线
@@ -178,13 +180,22 @@ class PoseDetector:
 
         return img, angle_degrees
 
-    def find_angle_with_horizontal_mean(self, img, p1, p2, p3, p4, draw=False):
+    def find_angle_with_horizontal_mean(self, img, p1, p2, p3, p4, side='left', draw=False):
+        """
+        计算夹角并绘制法向量，支持根据 'side' 参数选择左右两种情况。
+
+        :param side: 'left' 或 'right'，根据选择的方向绘制法向量
+        :param draw: 是否绘制图像
+        """
         h, w, c = img.shape
         img, self.lm_dict = self.find_position(img)
 
         for keypoint_id, lm in self.lm_dict.items():
             lm.convert_point_to_x_y_pixel(w, h, c)
+
         angle_degrees = None
+
+        # 显示关键点是否存在
         cv2.putText(img, f"p1 yes" if p1 in self.lm_dict else "p1 no", (20, 50), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 0, 255), 2)
         cv2.putText(img, f"p2 yes" if p2 in self.lm_dict else "p2 no", (20, 90), cv2.FONT_HERSHEY_PLAIN, 2,
@@ -193,79 +204,77 @@ class PoseDetector:
                     (255, 0, 255), 2)
         cv2.putText(img, f"p4 yes" if p4 in self.lm_dict else "p4 no", (20, 170), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 0, 255), 2)
-        angle_degrees = None
+
         if p1 in self.lm_dict and p2 in self.lm_dict and p3 in self.lm_dict and p4 in self.lm_dict:
             x1, y1 = self.lm_dict[p1].x, self.lm_dict[p1].y
             x2, y2 = self.lm_dict[p2].x, self.lm_dict[p2].y
             x3, y3 = self.lm_dict[p3].x, self.lm_dict[p3].y
             x4, y4 = self.lm_dict[p4].x, self.lm_dict[p4].y
+
+            # 计算中点
             x1_mean = (x1 + x2) / 2
             y1_mean = (y1 + y2) / 2
             x2_mean = (x3 + x4) / 2
             y2_mean = (y3 + y4) / 2
+
             # 计算方向向量
             dx = x2_mean - x1_mean
             dy = y2_mean - y1_mean
 
-            # 计算法向量
-            nx = -dy  # 法向量 x 分量
-            ny = dx  # 法向量 y 分量
+            # 计算法向量并归一化
+            norm = math.sqrt(dx ** 2 + dy ** 2)
+            nx = -dy / norm  # 归一化后的法向量 x 分量
+            ny = dx / norm  # 归一化后的法向量 y 分量
 
             # 计算法向量与水平线的夹角
-            angle_degrees = calculate_angle_with_horizontal(x1_mean, y1_mean, x2_mean, y2_mean)
+            angle_degrees = math.degrees(math.atan2(dy, dx))
+
+            if side == 'right':  # 如果是右侧，反转法向量
+                nx = -nx
+                ny = -ny
+
             if draw:
-                # 绘制原直线
-                print(f"x1_mean: {x1_mean}, y1_mean: {y1_mean}")
+                # 绘制中点和线
                 x1_mean = int(x1_mean)
                 y1_mean = int(y1_mean)
                 x2_mean = int(x2_mean)
                 y2_mean = int(y2_mean)
+
                 cv2.line(img, (x1_mean, y1_mean), (x2_mean, y2_mean), (255, 255, 255), 3)
                 cv2.circle(img, (x1_mean, y1_mean), 10, (0, 0, 255), cv2.FILLED)
                 cv2.circle(img, (x1_mean, y1_mean), 15, (0, 0, 255), 2)
                 cv2.circle(img, (x2_mean, y2_mean), 10, (0, 0, 255), cv2.FILLED)
                 cv2.circle(img, (x2_mean, y2_mean), 15, (0, 0, 255), 2)
 
-                # 绘制法向量
-                fx = x1_mean + int(nx * 20)  # 调整法向量长度
-                fy = y1_mean + int(ny * 20)
+                # 绘制法向量（长度调整为50像素）
+                fx = int(x1_mean + nx * 100)
+                fy = int(y1_mean + ny * 100)
                 cv2.arrowedLine(img, (x1_mean, y1_mean), (fx, fy), (0, 255, 0), 3, tipLength=0.3)
 
                 # 标注角度
-                cv2.putText(img, f"{int(angle_degrees)} degree", (x1_mean + 20, y1), cv2.FONT_HERSHEY_PLAIN, 2,
-                            (255, 0, 255), 2)
+                cv2.putText(img, f"{int(angle_degrees)} degrees", (x1_mean + 20, y1_mean - 20),
+                            cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 255), 2)
 
         return img, angle_degrees
 
     # TODO:
-    def find_angle_with_horizontal_mean_all(self, img, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, draw=False):
+    def find_angle_with_horizontal_mean_all(self, img, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, side="left",
+                                            draw=False):
         h, w, c = img.shape
         img, self.lm_dict = self.find_position(img)
 
         for keypoint_id, lm in self.lm_dict.items():
             lm.convert_point_to_x_y_pixel(w, h, c)
+
         angle_degrees = None
-        cv2.putText(img, f"p1 yes" if p1 in self.lm_dict else "p1 no", (20, 50), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p2 yes" if p2 in self.lm_dict else "p2 no", (20, 90), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p3 yes" if p3 in self.lm_dict else "p3 no", (20, 130), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p4 yes" if p4 in self.lm_dict else "p4 no", (20, 170), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p5 yes" if p5 in self.lm_dict else "p5 no", (20, 210), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p6 yes" if p6 in self.lm_dict else "p6 no", (20, 250), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p7 yes" if p7 in self.lm_dict else "p7 no", (20, 290), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p8 yes" if p8 in self.lm_dict else "p8 no", (20, 330), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p9 yes" if p9 in self.lm_dict else "p9 no", (20, 370), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        cv2.putText(img, f"p10 yes" if p10 in self.lm_dict else "p10 no", (20, 410), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 0, 255), 2)
-        if p1 in self.lm_dict and p2 in self.lm_dict and p3 in self.lm_dict and p4 in self.lm_dict and p5 in self.lm_dict and p6 in self.lm_dict and p7 in self.lm_dict and p8 in self.lm_dict and p9 in self.lm_dict and p10 in self.lm_dict:
+
+        # Display whether the keypoints exist
+        for i, p in enumerate([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10], 1):
+            cv2.putText(img, f"p{i} yes" if p in self.lm_dict else f"p{i} no", (20, 50 + 40 * i),
+                        cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 255), 2)
+
+        if all(p in self.lm_dict for p in [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]):
+            # Extracting the coordinates of the keypoints
             x1, y1 = self.lm_dict[p1].x, self.lm_dict[p1].y
             x2, y2 = self.lm_dict[p2].x, self.lm_dict[p2].y
             x3, y3 = self.lm_dict[p3].x, self.lm_dict[p3].y
@@ -276,6 +285,8 @@ class PoseDetector:
             x8, y8 = self.lm_dict[p8].x, self.lm_dict[p8].y
             x9, y9 = self.lm_dict[p9].x, self.lm_dict[p9].y
             x10, y10 = self.lm_dict[p10].x, self.lm_dict[p10].y
+
+            # Compute the midpoints of different keypoint pairs
             x14_mean = (x1 + x4) / 2
             y14_mean = (y1 + y4) / 2
             x25_mean = (x2 + x5) / 2
@@ -287,40 +298,56 @@ class PoseDetector:
             x910_mean = (x9 + x10) / 2
             y910_mean = (y9 + y10) / 2
 
+            # Average the midpoints to form two main points (left and right)
             x1_mean = (x14_mean + x25_mean + x36_mean + x78_mean) / 4
             y1_mean = (y14_mean + y25_mean + y36_mean + y78_mean) / 4
-
             x2_mean = x910_mean
             y2_mean = y910_mean
-            # 计算方向向量
+
+            # Calculate the direction vector
             dx = x2_mean - x1_mean
             dy = y2_mean - y1_mean
 
-            # 计算法向量
-            nx = -dy  # 法向量 x 分量
-            ny = dx  # 法向量 y 分量
+            # Compute the normal vector (perpendicular to the direction vector)
+            nx = -dy  # Normal vector x component
+            ny = dx  # Normal vector y component
 
-            # 计算法向量与水平线的夹角
-            angle_degrees = calculate_angle_with_horizontal(x1_mean, y1_mean, x2_mean, y2_mean) - 10
+            # Calculate the angle between the line and the horizontal axis
+            angle_degrees, _ = calculate_angle_with_horizontal(x1_mean, y1_mean, x2_mean, y2_mean)
+
+            # Adjust the angle for a more accurate result (optional)
+            angle_degrees -= 10  # Adjust for some constant offset if necessary
+
             if draw:
-                # 绘制原直线
-                print(f"x1_mean: {x1_mean}, y1_mean: {y1_mean}")
+                # Convert the points to integer for drawing
                 x1_mean = int(x1_mean)
                 y1_mean = int(y1_mean)
                 x2_mean = int(x2_mean)
                 y2_mean = int(y2_mean)
+
+                # Draw the original line
                 cv2.line(img, (x1_mean, y1_mean), (x2_mean, y2_mean), (255, 255, 255), 3)
                 cv2.circle(img, (x1_mean, y1_mean), 10, (0, 0, 255), cv2.FILLED)
                 cv2.circle(img, (x1_mean, y1_mean), 15, (0, 0, 255), 2)
                 cv2.circle(img, (x2_mean, y2_mean), 10, (0, 0, 255), cv2.FILLED)
                 cv2.circle(img, (x2_mean, y2_mean), 15, (0, 0, 255), 2)
 
-                # 绘制法向量
-                fx = x1_mean + int(nx * 20)  # 调整法向量长度
-                fy = y1_mean + int(ny * 20)
-                cv2.arrowedLine(img, (x1_mean, y1_mean), (fx, fy), (0, 255, 0), 3, tipLength=0.3)
+                # Draw the normal vector with smaller scaling factor
+                scale_factor = 5  # Smaller scale factor to adjust vector length
+                fx = x1_mean + int(nx * scale_factor)
+                fy = y1_mean + int(ny * scale_factor)
 
-                # 标注角度
+                # Adjust drawing side depending on the 'side' parameter
+                if side == "left":
+                    # Draw normal vector to the left
+                    cv2.arrowedLine(img, (x1_mean, y1_mean), (fx, fy), (0, 255, 0), 3, tipLength=0.3)
+                else:
+                    # Draw normal vector to the right
+                    fx = x1_mean - int(nx * scale_factor)  # Reverse the direction for right side
+                    fy = y1_mean - int(ny * scale_factor)
+                    cv2.arrowedLine(img, (x1_mean, y1_mean), (fx, fy), (0, 255, 0), 3, tipLength=0.3)
+
+                # Add angle annotation
                 cv2.putText(img, f"{int(angle_degrees)} degree", (x1_mean + 20, y1), cv2.FONT_HERSHEY_PLAIN, 2,
                             (255, 0, 255), 2)
 
