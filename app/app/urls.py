@@ -17,7 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from testcv2 import views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('test/', include('testcv2.urls')),
+    path('', views.index_page, name='index_page'),
+    path('cap/', include('testcv2.urls')),
 ]

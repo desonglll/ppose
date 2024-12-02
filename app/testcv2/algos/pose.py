@@ -180,7 +180,7 @@ class PoseDetector:
 
         return img, angle_degrees
 
-    def find_angle_with_horizontal_mean(self, img, p1, p2, p3, p4, side='left', draw=False):
+    def find_angle_with_horizontal_mean(self, img, p1, p2, p3, p4, side='left', draw=False, fix=0):
         """
         计算夹角并绘制法向量，支持根据 'side' 参数选择左右两种情况。
 
@@ -228,6 +228,7 @@ class PoseDetector:
 
             # 计算法向量与水平线的夹角
             angle_degrees = math.degrees(math.atan2(dy, dx))
+            angle_degrees -= fix
 
             if side == 'right':  # 如果是右侧，反转法向量
                 nx = -nx
@@ -353,6 +354,59 @@ class PoseDetector:
 
         return img, angle_degrees
 
+    def convert_to_3d_point(self, dict1, dict2):
+        result = []
+        for i, _ in dict1.items():
+            item = {
+                "id": i,
+                "x": dict1[i].x,
+                "y": dict1[i].y,
+                "z": dict2[i].x,
+            }
+            result.append(item)
+        print(result)
+
+        pass
+
+
+def tese_2_cap():
+    cap1 = cv2.VideoCapture(3)
+    cap2 = cv2.VideoCapture(0)
+    detector = PoseDetector()
+
+    while True:
+        success1, img1 = cap1.read()
+        success2, img2 = cap2.read()
+        img1 = cv2.resize(img1, (1280, 720))
+        img2 = cv2.resize(img2, (1280, 720))
+        if not success1 or not success2:
+            break
+
+        img1, dic1 = detector.find_position(img1, convert_to_x_y_pixel=True, draw=True)
+        img2, dic2 = detector.find_position(img2, convert_to_x_y_pixel=True, draw=True)
+        if dic1 and dic2:
+            # print(f"dic1 point 0: {dic1[0]}")
+            # print(f"dic2 point 0: {dic2[0]}")
+            detector.convert_to_3d_point(dic1, dic2)
+
+            # x0 = dic1[0].x
+            # y0 = dic1[0].y
+            # z0 = dic2[0].x
+            # print(x0, y0, z0)
+        cv2.namedWindow('img1', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('img2', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('img1', 1280, 720)
+        cv2.resizeWindow('img2', 1280, 720)
+        cv2.imshow('img1', img1)
+        cv2.imshow('img2', img2)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # 按 'q' 键退出
+            break
+    cap1.release()
+    cap2.release()
+    cv2.destroyAllWindows()
+    pass
+
 
 def main():
     # cap = cv2.VideoCapture("../../datasets/body_videos/body_1.jpg")
@@ -402,5 +456,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    tese_2_cap()
     pass

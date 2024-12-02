@@ -1,0 +1,27 @@
+{% extends "testcv2/base.html" %}
+
+{% block header %}
+    {% include "testcv2/header.html" %}
+
+    <div class="container">
+        <div class="fs-2" style="display: flex; align-items: center; justify-content: center;">
+            <h2>导航页</h2>
+        </div>
+    </div>
+{% endblock %}
+
+{% block body %}
+
+    <div class="container">
+        <ul class="list-group">
+            <li class="list-group-item">
+                <a href="{% url "video_page_single" %}">单摄像头捕捉</a>
+            </li>
+            <li class="list-group-item">A second item</li>
+            <li class="list-group-item">A third item</li>
+            <li class="list-group-item">A fourth item</li>
+            <li class="list-group-item">And a fifth one</li>
+        </ul>
+    </div>
+
+{% endblock %}

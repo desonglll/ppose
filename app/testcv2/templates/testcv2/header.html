@@ -1,0 +1,19 @@
+<ul class="nav nav-tabs">
+    <li class="nav-item">
+        {% url 'index_page' as index_url %}
+        <a class="nav-link {% if request.path == index_url %}active{% endif %}"
+           href="{% url "index_page" %}">导航页</a>
+    </li>
+    <li class="nav-item">
+        {% url 'video_page_single' as single_video_url %}
+        <a class="nav-link {% if request.path == single_video_url %}active{% endif %}"
+           href="{% url "video_page_single" %}">单摄</a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link" href="{% url "video_page_double" %}">双摄</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link disabled">Info</a>
+    </li>
+</ul>

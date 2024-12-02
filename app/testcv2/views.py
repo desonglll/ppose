@@ -32,22 +32,21 @@ def get_frame(param):
             img, angle = detector.find_angle_with_horizontal(img, 5, 10, draw=True)
         elif param == "5":
             img, landmarks = detector.find_position(img, convert_to_x_y_pixel=True, draw=False)
-            if landmarks[7].x > landmarks[0].x:  # 判断摄像头所处的左右
-                img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, side="left", draw=True)
-                print("Camera on LEFT")
-            else:
-                img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, side="right", draw=True)
-                print("Camera on RIGHT")
+            if landmarks:
+
+                if landmarks[7].x > landmarks[0].x:  # 判断摄像头所处的左右
+                    img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, side="left", draw=True,
+                                                                          fix=80)
+                else:
+                    img, angle = detector.find_angle_with_horizontal_mean(img, 2, 5, 9, 10, side="right", draw=True)
         elif param == "6":
             img, landmarks = detector.find_position(img, convert_to_x_y_pixel=True, draw=False)
             if landmarks[7].x > landmarks[0].x:  # 判断摄像头所处的左右
                 img, angle = detector.find_angle_with_horizontal_mean_all(img, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, draw=True,
                                                                           side="left")
-                print("Camera on LEFT")
             else:
                 img, angle = detector.find_angle_with_horizontal_mean_all(img, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, draw=True,
                                                                           side="right")
-                print("Camera on RIGHT")
 
         _, buffer = cv2.imencode('.jpg', img)
 
@@ -73,5 +72,13 @@ def video_feed(request):
     )
 
 
-def video_page(request):
-    return render(request, 'testcv2/video_page.html')
+def single_video_page(request):
+    return render(request, 'testcv2/single_video_page.html')
+
+
+def index_page(request):
+    return render(request, 'testcv2/index.html')
+
+
+def double_video_page(request):
+    return render(request, 'testcv2/double_video_page.html')
